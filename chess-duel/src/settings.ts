@@ -2,14 +2,25 @@ import type { Color, GameResult, MoveInput } from './game';
 import type { PieceStyleId } from './pieces';
 import type { BoardThemeId } from './themes';
 
+/**
+ * follow: every piece turns to face the player whose turn it is (players sit opposite each other)
+ * fixed:  each side's pieces always face their owner
+ * pass:   the whole board spins so the side to move is at the bottom (players pass the phone)
+ */
+export type Orientation = 'follow' | 'fixed' | 'pass';
+
 export interface Settings {
   theme: BoardThemeId;
   pieces: PieceStyleId;
   sound: boolean;
+  fxVolume: number;
+  music: boolean;
+  musicVolume: number;
   haptics: boolean;
   showLegal: boolean;
   showCoords: boolean;
-  rotateTop: boolean;
+  orientation: Orientation;
+  mascot: boolean;
   names: Record<Color, string>;
 }
 
@@ -27,17 +38,21 @@ export interface SavedGame {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'walnut',
-  pieces: 'royal',
+  theme: 'tangerine',
+  pieces: 'playful',
   sound: true,
+  fxVolume: 0.8,
+  music: true,
+  musicVolume: 0.4,
   haptics: true,
   showLegal: true,
   showCoords: true,
-  rotateTop: true,
+  orientation: 'follow',
+  mascot: true,
   names: { w: 'White', b: 'Black' },
 };
 
-const SETTINGS_KEY = 'chessduel.settings.v1';
+const SETTINGS_KEY = 'chessduel.settings.v2';
 const GAME_KEY = 'chessduel.game.v1';
 
 function read<T>(key: string): T | null {

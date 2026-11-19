@@ -1,7 +1,7 @@
 import { CBURNETT } from './pieceArt';
 import type { Color, PieceSymbol } from './game';
 
-export type PieceStyleId = 'classic' | 'royal' | 'midnight';
+export type PieceStyleId = 'playful' | 'classic' | 'royal' | 'midnight';
 
 interface Palette {
   /** body fill for white pieces (solid or gradient stops) */
@@ -15,6 +15,17 @@ interface Palette {
 }
 
 export const PIECE_STYLES: Array<{ id: PieceStyleId; name: string; palette: Palette | null }> = [
+  {
+    id: 'playful',
+    name: 'Playful',
+    palette: {
+      wFill: ['#ffffff', '#ffe3bd'],
+      wStroke: '#3b3355',
+      bFill: ['#6c5ca8', '#2c2448'],
+      bStroke: '#231c3a',
+      bDetail: '#ffd166',
+    },
+  },
   { id: 'classic', name: 'Classic', palette: null },
   {
     id: 'royal',

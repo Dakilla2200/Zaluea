@@ -1,9 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@fontsource-variable/inter';
-import '@fontsource/playfair-display/600.css';
-import '@fontsource/playfair-display/700.css';
+import '@fontsource-variable/nunito';
+import '@fontsource/fredoka/500.css';
+import '@fontsource/fredoka/600.css';
+import '@fontsource/fredoka/700.css';
 import './styles.css';
+import { MotionConfig } from 'framer-motion';
 import App from './App';
 
 // Block pinch-zoom / double-tap zoom gestures that iOS Safari ignores in the viewport meta.
@@ -25,6 +27,8 @@ document.addEventListener('contextmenu', stop);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <MotionConfig reducedMotion="user">
+      <App />
+    </MotionConfig>
   </StrictMode>,
 );
