@@ -16,13 +16,16 @@ Meet **Pip the pawn**, the mascot who hops to whichever player he's cheering for
 - Chess clock: no timer, 1 / 3 / 5 / 10 / 15 min, optional +2/+5/+10s increment, pause/resume, low-time warning, auto-pause when the app is backgrounded.
 - Undo, Restart (confirmation), New match, resign (inline confirmation) and draw offer/accept per player.
 - Victory/defeat/draw screen split for both players; move history in SAN with Copy/Share PGN.
-- **Game review**: a calm, step-by-step look back at the game. Tap Continue to go one move at a time; each move is
-  explained in plain English ("Sam's queen took a pawn"), rated in friendly words (Perfect move! … Oops, a slip),
-  and slips come with a tip and a green arrow showing the better move. Stockfish rates the moves on the device
-  (offline) in the background; if it can't start, the review is a plain replay.
+- **Points & standing**: material points (pawn 1, knight/bishop 3, rook 5, queen 9). Each player panel shows a label:
+  Fair · Low advantage/disadvantage (1–2) · Advantage/Disadvantage (3–5) · High advantage/disadvantage (6+).
+- **Game review**: like a lesson, it stops only at the key moments (slips, big captures, promotions, the finish; up to 8),
+  fast-forwarding the quiet moves in between. Each moment explains the move in plain English, shows what it did to
+  the points ("Black lost a queen: −9 points") and a points bar, rates it in friendly words, and gives a tip with a
+  green arrow for slips. "Show every move" switches to a full step-by-step replay. Stockfish rates the moves on the
+  device (offline); if it can't start, the review still works from the points alone.
 - Settings: 6 board themes, 4 piece styles, piece direction, sound/music with volumes, Pip on/off, vibration, legal-move hints, coordinates, player names.
 - Stereo sound effects that pan with the piece's file, plus generative background music (on by default, starts on first tap). Separate volume controls. All synthesized with Web Audio, so nothing to download.
-- Spring animations everywhere: sliding/landing pieces, hopping selection, popping legal-move dots, capture sparks and screen shake, check flash, sliding sheets, confetti victory screen.
+- Calm, smooth animations: sliding pieces, a gentle lift on selection, fading legal-move dots and captures, a soft check glow, sliding sheets, light confetti on wins.
 - Game + settings persist across reloads.
 - Installable PWA, fully offline after first load. Zoom/scroll gestures are blocked during play.
 

@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useAnimationControls, type MotionStyle } from "framer-motion";
+import { AnimatePresence, motion, type MotionStyle } from "framer-motion";
 import { memo, useEffect, useRef, type ReactNode } from "react";
 import { FILES, coordsToSquare, squareToCoords, type Color, type Square, type TrackedPiece } from '../game';
 import { pieceImage, type PieceStyleId } from '../pieces';
@@ -27,27 +27,15 @@ export interface BoardProps {
   children?: ReactNode;
 }
 
-const SLIDE = { type: 'spring', stiffness: 470, damping: 30, mass: 0.85 } as const;
-const BURST_COLORS = ['#FFC93C', '#FF8A1F', '#14B8C4', '#FF4D5E', '#4CC264'];
+const SLIDE = { type: 'spring', stiffness: 320, damping: 36, mass: 0.9 } as const;
+const CALM = { type: 'spring', stiffness: 300, damping: 32 } as const;
 
+/** Soft fading ring where a piece was captured. */
 function Burst({ square }: { square: Square }) {
   const { file, rank } = squareToCoords(square);
   return (
     <div className="burst" style={{ left: `${file * 12.5 + 6.25}%`, top: `${(7 - rank) * 12.5 + 6.25}%` }}>
-      {Array.from({ length: 12 }, (_, i) => {
-        const a = (i / 12) * Math.PI * 2;
-        const d = 30 + (i % 3) * 10;
-        return (
-          <motion.i
-            key={i}
-            style={{ background: BURST_COLORS[i % BURST_COLORS.length] }}
-            initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-            animate={{ x: Math.cos(a) * d, y: Math.sin(a) * d, scale: 0, opacity: 0 }}
-            transition={{ duration: 0.55, ease: [0.2, 0.8, 0.3, 1], delay: 0.12 }}
-          />
-        );
-      })}
-      <motion.b initial={{ scale: 0.2, opacity: 0.9 }} animate={{ scale: 1.6, opacity: 0 }} transition={{ duration: 0.45, delay: 0.1 }} />
+      <motion.b initial={{ scale: 0.5, opacity: 0.6 }} animate={{ scale: 1.15, opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut', delay: 0.15 }} />
     </div>
   );
 }
@@ -57,10 +45,6 @@ function BoardImpl(p: BoardProps) {
   useEffect(() => {
     mounted.current = true;
   }, []);
-  const shake = useAnimationControls();
-  useEffect(() => {
-    if (p.burst) void shake.start({ x: [0, -4, 4, -3, 2, 0], y: [0, 2, -1, 1, 0, 0], transition: { duration: 0.34, delay: 0.12 } });
-  }, [p.burst, shake]);
 
   const boardTurned = p.orientation === 'pass' && p.turn === 'b';
   const glyphTurned = (c: Color) => (p.orientation === 'fixed' ? c === 'b' : p.turn === 'b');
@@ -79,7 +63,6 @@ function BoardImpl(p: BoardProps) {
     p.onSquare(coordsToSquare(file, 7 - row));
   };
 
-  let dotIndex = 0;
   const squares = [];
   for (let row = 0; row < 8; row++) {
     for (let file = 0; file < 8; file++) {
@@ -97,9 +80,9 @@ function BoardImpl(p: BoardProps) {
           {target !== undefined && (
             <motion.span
               className={target ? 'hint capture' : 'hint'}
-              initial={{ scale: 0, opacity: 0 }}
+              initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 700, damping: 18, delay: dotIndex++ * 0.018 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
             />
           )}
           {p.showCoords && file === 0 && <span className={`coord rank ${light ? 'on-light' : 'on-dark'}${coordTurn ? ' turned' : ''}`}>{8 - row}</span>}
@@ -122,13 +105,13 @@ function BoardImpl(p: BoardProps) {
   } as unknown as MotionStyle;
 
   return (
-    <motion.div className="board-shake" animate={shake}>
+    <div className="board-shake">
       <motion.div
         className="board-frame"
         style={style}
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.98, opacity: 0 }}
         animate={{ scale: 1, opacity: 1, rotate: boardTurned ? 180 : 0 }}
-        transition={{ scale: { type: 'spring', stiffness: 260, damping: 18 }, opacity: { duration: 0.3 }, rotate: { type: 'spring', stiffness: 120, damping: 17, delay: 0.38 } }}
+        transition={{ scale: CALM, opacity: { duration: 0.3 }, rotate: { type: 'spring', stiffness: 90, damping: 22, delay: 0.35 } }}
       >
         <div className="board" onPointerDown={handlePointer} style={{ width: p.size, height: p.size }}>
           <div className="squares">{squares}</div>
@@ -140,36 +123,31 @@ function BoardImpl(p: BoardProps) {
                 const x = `${file * 100}%`;
                 const y = `${(7 - rank) * 100}%`;
                 const lifted = p.selected === pc.square;
-                // the flip sweeps across the board as a wave, starting from the side that just moved
-                const waveDelay = 0.3 + (p.turn === 'b' ? rank : 7 - rank) * 0.035 + file * 0.008;
                 return (
                   <motion.div
                     key={pc.id}
                     className="piece"
                     style={{ zIndex: pc.id === p.lastMoverId ? 3 : 2 }}
-                    initial={mounted.current ? { x, y, scale: 0, opacity: 0 } : false}
+                    initial={mounted.current ? { x, y, scale: 0.9, opacity: 0 } : false}
                     animate={{ x, y, scale: 1, opacity: 1 }}
-                    exit={{ scale: [1, 1.25, 0], rotate: [0, -12, 35], opacity: [1, 1, 0], transition: { duration: 0.42, delay: 0.13, times: [0, 0.3, 1] } }}
-                    transition={{ x: SLIDE, y: SLIDE, scale: { type: 'spring', stiffness: 500, damping: 18 }, opacity: { duration: 0.2 } }}
+                    exit={{ scale: 0.8, opacity: 0, transition: { duration: 0.25, delay: 0.15 } }}
+                    transition={{ x: SLIDE, y: SLIDE, scale: CALM, opacity: { duration: 0.2 } }}
                   >
                     <motion.div
                       className="piece-lift"
-                      animate={lifted ? { y: boardTurned ? '9%' : '-9%', scale: 1.13 } : { y: '0%', scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 650, damping: lifted ? 11 : 20 }}
+                      animate={lifted ? { y: boardTurned ? '4%' : '-4%', scale: 1.05 } : { y: '0%', scale: 1 }}
+                      transition={CALM}
                     >
                       <motion.div
                         className="piece-rot"
                         initial={false}
                         animate={{ rotate: glyphTurned(pc.color) ? 180 : 0 }}
-                        transition={{ type: 'spring', stiffness: 210, damping: 16, delay: p.orientation === 'follow' ? waveDelay : 0 }}
+                        transition={{ type: 'spring', stiffness: 120, damping: 22, delay: p.orientation === 'follow' ? 0.3 : 0 }}
                       >
-                        <motion.div
-                          key={pc.square + pc.type}
+                        <div
+                          key={pc.type}
                           className="piece-img"
                           style={{ backgroundImage: pieceImage(p.pieceStyle, pc.color, pc.type) }}
-                          initial={mounted.current && pc.id === p.lastMoverId ? { scaleX: 1.2, scaleY: 0.78 } : false}
-                          animate={{ scaleX: 1, scaleY: 1 }}
-                          transition={{ type: 'spring', stiffness: 520, damping: 11, delay: 0.17 }}
                         />
                       </motion.div>
                     </motion.div>
@@ -183,7 +161,7 @@ function BoardImpl(p: BoardProps) {
           {p.children}
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 

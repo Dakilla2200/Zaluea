@@ -3,13 +3,13 @@ import { memo, useEffect, useId, useState } from 'react';
 
 export type PipMood = 'idle' | 'happy' | 'surprised' | 'worried' | 'cheer' | 'sad';
 
-const MOTIONS: Record<PipMood, { y?: number[]; x?: number[]; rotate?: number[]; scaleX?: number[]; scaleY?: number[]; duration: number; repeat?: number }> = {
-  idle: { y: [0, -6, 0], scaleY: [1, 1.04, 1], duration: 0.45 },
-  happy: { y: [0, -14, 0, -5, 0], scaleX: [1, 0.95, 1.08, 1, 1], scaleY: [1, 1.06, 0.92, 1, 1], duration: 0.7 },
-  surprised: { y: [0, -20, 0], scaleX: [1, 0.9, 1.12, 1], scaleY: [1, 1.12, 0.88, 1], duration: 0.6 },
-  worried: { x: [0, -5, 5, -4, 4, 0], rotate: [0, -5, 5, -3, 3, 0], duration: 0.55 },
-  cheer: { y: [0, -22, 0, -16, 0], rotate: [0, -8, 0, 8, 0], duration: 0.85, repeat: 1 },
-  sad: { y: [0, 3, 0], rotate: [0, -6, -4], duration: 0.8 },
+const MOTIONS: Record<PipMood, { y?: number[]; x?: number[]; rotate?: number[]; duration: number; repeat?: number }> = {
+  idle: { y: [0, -2, 0], duration: 0.4 },
+  happy: { y: [0, -5, 0], duration: 0.45 },
+  surprised: { y: [0, -6, 0], duration: 0.4 },
+  worried: { rotate: [0, -3, 3, 0], duration: 0.5 },
+  cheer: { y: [0, -8, 0, -4, 0], duration: 0.8 },
+  sad: { y: [0, 2, 0], rotate: [0, -4, -3], duration: 0.6 },
 };
 
 /** Pip the pawn — the app's mascot. `pulse` changes retrigger the reaction animation. */
@@ -21,7 +21,7 @@ function PipImpl({ mood, pulse, size = 48 }: { mood: PipMood; pulse: number; siz
   useEffect(() => {
     const m = MOTIONS[mood];
     const { duration, repeat, ...frames } = m;
-    void ctl.start({ ...frames, transition: { duration, repeat: repeat ?? 0, ease: 'easeOut' } });
+    void ctl.start({ ...frames, transition: { duration, repeat: repeat ?? 0, ease: 'easeInOut' } });
   }, [mood, pulse, ctl]);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ function PipImpl({ mood, pulse, size = 48 }: { mood: PipMood; pulse: number; siz
   }, []);
 
   const eyesHappy = mood === 'happy' || mood === 'cheer';
-  const armsUp = mood === 'cheer' ? 125 : mood === 'happy' ? 40 : mood === 'surprised' ? 70 : 0;
+  const armsUp = mood === 'cheer' ? 100 : mood === 'happy' ? 30 : mood === 'surprised' ? 45 : 0;
 
   return (
     <motion.div className="pip" style={{ width: size, height: size * (140 / 120), originY: 1 }} animate={ctl}>
@@ -50,8 +50,8 @@ function PipImpl({ mood, pulse, size = 48 }: { mood: PipMood; pulse: number; siz
           </linearGradient>
         </defs>
         <ellipse cx="60" cy="134" rx="38" ry="5" fill="rgba(59,51,85,.18)" />
-        <motion.rect x="14" y="78" width="20" height="11" rx="5.5" fill="#F07A12" style={{ originX: '100%', originY: '20%' }} animate={{ rotate: armsUp }} transition={{ type: 'spring', stiffness: 400, damping: 12 }} />
-        <motion.rect x="86" y="78" width="20" height="11" rx="5.5" fill="#F07A12" style={{ originX: '0%', originY: '20%' }} animate={{ rotate: -armsUp }} transition={{ type: 'spring', stiffness: 400, damping: 12 }} />
+        <motion.rect x="14" y="78" width="20" height="11" rx="5.5" fill="#F07A12" style={{ originX: '100%', originY: '20%' }} animate={{ rotate: armsUp }} transition={{ type: 'spring', stiffness: 220, damping: 22 }} />
+        <motion.rect x="86" y="78" width="20" height="11" rx="5.5" fill="#F07A12" style={{ originX: '0%', originY: '20%' }} animate={{ rotate: -armsUp }} transition={{ type: 'spring', stiffness: 220, damping: 22 }} />
         <path d="M24 130 C24 118 32 112 40 108 C34 100 34 92 38 86 L82 86 C86 92 86 100 80 108 C88 112 96 118 96 130 Z" fill={`url(#pb${gid})`} />
         <rect x="30" y="80" width="60" height="12" rx="6" fill="#D9670A" />
         <circle cx="60" cy="50" r="38" fill={`url(#pb${gid})`} />
@@ -67,7 +67,7 @@ function PipImpl({ mood, pulse, size = 48 }: { mood: PipMood; pulse: number; siz
           <g>
             {[46, 74].map((cx) => (
               <g key={cx}>
-                <motion.ellipse cx={cx} cy="48" rx="10" ry="12" fill="#fff" animate={{ scale: mood === 'surprised' ? 1.2 : 1 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }} />
+                <motion.ellipse cx={cx} cy="48" rx="10" ry="12" fill="#fff" animate={{ scale: mood === 'surprised' ? 1.2 : 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }} />
                 <motion.circle cx={cx + 1.5} cy={mood === 'sad' ? 53 : 50} r="6" fill="#3B3355" animate={{ scale: mood === 'surprised' ? 0.7 : 1 }} />
                 <circle cx={cx + 3.5} cy={mood === 'sad' ? 50 : 47} r="2" fill="#fff" />
                 <motion.rect x={cx - 11} y="35" width="22" height="26" rx="10" fill="#F98C2B" style={{ originY: 0 }} initial={false} animate={{ scaleY: blink ? 1 : 0 }} transition={{ duration: 0.07 }} />

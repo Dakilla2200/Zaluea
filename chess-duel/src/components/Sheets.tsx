@@ -7,7 +7,7 @@ import { BOARD_THEMES } from '../themes';
 import { IconCopy, IconShare } from './Icons';
 import { Sheet } from './Overlays';
 
-const KNOB = { type: 'spring', stiffness: 600, damping: 26 } as const;
+const KNOB = { type: 'spring', stiffness: 400, damping: 34 } as const;
 
 function Toggle({ label, hint, value, onChange }: { label: string; hint?: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -35,7 +35,7 @@ function Slider({ id, label, value, disabled, onChange }: { id: string; label: s
 }
 
 function SelRing() {
-  return <motion.span className="sel-ring" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 600, damping: 20 }} />;
+  return <motion.span className="sel-ring" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} />;
 }
 
 /** Segmented control with a pill that springs to the selected option. */
@@ -69,7 +69,7 @@ export function SettingsSheet({ settings, onChange, onClose }: { settings: Setti
       <h4 className="section">Board</h4>
       <div className="swatches">
         {BOARD_THEMES.map((t) => (
-          <motion.button key={t.id} className={`swatch${settings.theme === t.id ? ' sel' : ''}`} onClick={() => set('theme', t.id)} whileTap={{ scale: 0.9 }}>
+          <motion.button key={t.id} className={`swatch${settings.theme === t.id ? ' sel' : ''}`} onClick={() => set('theme', t.id)} whileTap={{ scale: 0.96 }}>
             {settings.theme === t.id && <SelRing />}
             <span className="swatch-board" style={{ background: t.rim, boxShadow: `0 3px 0 ${t.rimEdge}` }}>
               <span style={{ background: `conic-gradient(${t.dark} 0 25%, ${t.light} 0 50%, ${t.dark} 0 75%, ${t.light} 0)` }} />
@@ -82,7 +82,7 @@ export function SettingsSheet({ settings, onChange, onClose }: { settings: Setti
       <h4 className="section">Pieces</h4>
       <div className="piece-styles">
         {PIECE_STYLES.map((s) => (
-          <motion.button key={s.id} className={`piece-style${settings.pieces === s.id ? ' sel' : ''}`} onClick={() => set('pieces', s.id)} whileTap={{ scale: 0.9 }}>
+          <motion.button key={s.id} className={`piece-style${settings.pieces === s.id ? ' sel' : ''}`} onClick={() => set('pieces', s.id)} whileTap={{ scale: 0.96 }}>
             {settings.pieces === s.id && <SelRing />}
             <span className="ps-preview">
               <i style={{ backgroundImage: pieceImage(s.id, 'w', 'n') }} />
@@ -201,7 +201,7 @@ export function HistorySheet({ verbose, result, names, onClose, onReview }: { ve
       ) : (
         <div className="moves" ref={listRef}>
           {rows.map(([w, b], i) => (
-            <motion.div key={i} className="move-row" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i, 14) * 0.025 }}>
+            <motion.div key={i} className="move-row" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i, 14) * 0.015 }}>
               <span className="num">{i + 1}</span>
               <span className={`san${i * 2 === verbose.length - 1 ? ' cur' : ''}`}>{w.san}</span>
               <span className={`san${b && i * 2 + 1 === verbose.length - 1 ? ' cur' : ''}`}>{b?.san ?? ''}</span>
@@ -210,7 +210,7 @@ export function HistorySheet({ verbose, result, names, onClose, onReview }: { ve
         </div>
       )}
       {toast && (
-        <motion.div className="toast" initial={{ y: 20, scale: 0.8, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }}>
+        <motion.div className="toast" initial={{ y: 6, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           {toast}
         </motion.div>
       )}
@@ -240,10 +240,10 @@ export function NewMatchSheet({ current, inProgress, onStart, onClose }: { curre
             key={String(m)}
             className={`chip${tc.minutes === m ? ' sel' : ''}`}
             onClick={() => setTc({ minutes: m, increment: m === null ? 0 : tc.increment })}
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: tc.minutes === m ? 1.04 : 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 18, delay: i * 0.03 }}
-            whileTap={{ scale: 0.92 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2, delay: i * 0.02 }}
+            whileTap={{ scale: 0.96 }}
           >
             <strong>{m === null ? '∞' : m}</strong>
             <small>{m === null ? 'No timer' : m === 1 ? 'minute' : 'minutes'}</small>

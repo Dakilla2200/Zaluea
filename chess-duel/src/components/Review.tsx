@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Engine, type EngineEval } from '../engine';
 import { describeDanger, describeMove, describeSuggestion, scoreWord, VERDICT } from '../explain';
-import { findKing, squareToCoords, trackPieces, type Color, type Move, type Square } from '../game';
+import { PIECE_VALUE, findKing, materialBalance, squareToCoords, trackPieces, type Color, type Move, type Square } from '../game';
+import { signed, standing } from '../standing';
 import type { PieceStyleId } from '../pieces';
 import { classify, moveUci, summarize, type ReviewedMove } from '../review';
 import type { SoundName } from '../sound';
@@ -33,6 +34,68 @@ interface PosAnalysis {
 const cache = new Map<string, Array<PosAnalysis | undefined>>();
 const NO_TARGETS = new Map<Square, boolean>();
 const noop = () => {};
+const PIECE_NAME: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+const MAX_MOMENTS = 8;
+
+/** Picks the moves worth stopping at: slips, big captures, promotions and the finish. */
+function pickMoments(verbose: Move[], reviewed: Array<ReviewedMove | undefined>): number[] {
+  const scored: Array<{ i: number; score: number }> = [];
+  verbose.forEach((m, i) => {
+    const r = reviewed[i];
+    let score = 0;
+    if (r?.cls === 'blunder') score = 100;
+    else if (r?.cls === 'mistake') score = 80;
+    if (m.captured && PIECE_VALUE[m.captured] >= 3) score = Math.max(score, 40 + PIECE_VALUE[m.captured]);
+    if (m.promotion) score = Math.max(score, 60);
+    if (i === verbose.length - 1 && new Chess(m.after).isGameOver()) score = Math.max(score, 90);
+    if (score) scored.push({ i, score });
+  });
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_MOMENTS)
+    .map((x) => x.i)
+    .sort((a, b) => a - b);
+}
+
+/** What this move did to the points, in plain words. */
+function pointsChange(m: Move, names: Record<Color, string>): string | null {
+  if (m.captured) {
+    const v = PIECE_VALUE[m.captured];
+    const loser = m.color === 'w' ? 'b' : 'w';
+    return `${names[loser]} lost a ${PIECE_NAME[m.captured]}: −${v} point${v === 1 ? '' : 's'}`;
+  }
+  if (m.promotion) {
+    const v = PIECE_VALUE[m.promotion] - 1;
+    return `${names[m.color]}'s pawn became a ${PIECE_NAME[m.promotion]}: +${v} points`;
+  }
+  return null;
+}
+
+function Scoreboard({ balance, names }: { balance: number; names: Record<Color, string> }) {
+  const w = standing(balance);
+  const b = standing(-balance);
+  const pos = 50 - (Math.max(-10, Math.min(10, balance)) / 10) * 42; // knob slides toward whoever is ahead (White on the left)
+  return (
+    <div className="scoreboard" aria-label={`Points: ${names.w} ${signed(balance)}, ${names.b} ${signed(-balance)}`}>
+      <span className="sb-side">
+        <span className="dot-color w" />
+        <b>{signed(balance)}</b>
+      </span>
+      <div className="sb-bar">
+        <span className="sb-mid" />
+        <motion.i className="sb-knob" animate={{ left: `${pos}%` }} transition={{ type: 'spring', stiffness: 160, damping: 26 }} />
+      </div>
+      <span className="sb-side right">
+        <b>{signed(-balance)}</b>
+        <span className="dot-color b" />
+      </span>
+      <span className={`standing ${w.tone}`}>{w.label}</span>
+      <span />
+      <span className={`standing ${b.tone} right`}>{b.label}</span>
+    </div>
+  );
+}
+
 const TONE_MOOD: Record<string, PipMood> = { great: 'cheer', good: 'happy', ok: 'idle', tip: 'idle' };
 
 function terminalEval(fen: string): EngineEval | null {
@@ -62,7 +125,7 @@ function Arrow({ uci }: { uci: string }) {
           strokeLinecap="round"
           initial={{ pathLength: 0, opacity: 0 } as never}
           animate={{ pathLength: 1, opacity: 0.9 } as never}
-          transition={{ duration: 0.45, ease: 'easeOut', delay: 0.5 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.4 }}
         />
         <motion.path d={`M${len} 0 L${len - 0.42} -0.32 L${len - 0.42} 0.32 Z`} fill="#4cc264" initial={{ opacity: 0 }} animate={{ opacity: 0.95 }} transition={{ delay: 0.9, duration: 0.2 }} />
       </g>
@@ -97,8 +160,9 @@ export function Review(p: Props) {
   const key = p.verbose.map((m) => m.lan).join(' ');
   const [analysis, setAnalysis] = useState<Array<PosAnalysis | undefined>>(() => cache.get(key) ?? []);
   const [status, setStatus] = useState<Status>(() => (cache.get(key)?.filter(Boolean).length === n + 1 ? 'done' : 'loading'));
-  /** 0 = intro, 1..n = after that move, n+1 = the end summary */
+  /** 0 = intro, 1..L = the chosen moves, L+1 = the end summary */
   const [step, setStep] = useState(0);
+  const [mode, setMode] = useState<'key' | 'all'>('key');
   const [burst, setBurst] = useState<{ square: Square; key: number } | null>(null);
 
   const fens = useMemo(() => (n ? [...p.verbose.map((m) => m.before), p.verbose[n - 1].after] : [new Chess().fen()]), [p.verbose, n]);
@@ -155,6 +219,11 @@ export function Review(p: Props) {
   const summary = useMemo(() => summarize(p.verbose, reviewed), [p.verbose, reviewed]);
   const great = { w: summary.counts.w.best + summary.counts.w.excellent, b: summary.counts.b.best + summary.counts.b.excellent };
   const progress = n === 0 ? 1 : analysis.filter(Boolean).length / (n + 1);
+  const ready = status === 'done' || status === 'failed';
+  const balances = useMemo(() => p.verbose.map((m) => materialBalance(new Chess(m.after))), [p.verbose]);
+  const moments = useMemo(() => (ready ? pickMoments(p.verbose, reviewed) : []), [ready, p.verbose, reviewed]);
+  const list = useMemo(() => (mode === 'key' ? moments : p.verbose.map((_, i) => i)), [mode, moments, p.verbose]);
+  const L = list.length;
 
   // ---------- stepping ----------
   const { sfx, verbose, onClose } = p;
@@ -163,10 +232,10 @@ export function Review(p: Props) {
   const go = useCallback(
     (to: number) => {
       const cur = stepRef.current;
-      const next = Math.max(0, Math.min(n + 1, to));
+      const next = Math.max(0, Math.min(L + 1, to));
       if (next === cur) return;
-      if (next === cur + 1 && next <= n) {
-        const m = verbose[cur];
+      if (next === cur + 1 && next <= L) {
+        const m = verbose[list[next - 1]];
         const f = m.to.charCodeAt(0) - 97;
         if (m.captured) {
           setBurst({ square: m.isEnPassant() ? ((m.to[0] + m.from[1]) as Square) : m.to, key: Date.now() });
@@ -177,7 +246,7 @@ export function Review(p: Props) {
       stepRef.current = next;
       setStep(next);
     },
-    [n, verbose, sfx],
+    [L, list, verbose, sfx],
   );
 
   useEffect(() => {
@@ -198,7 +267,7 @@ export function Review(p: Props) {
     if (!el) return;
     const measure = () => {
       const s = Math.min(el.clientWidth - 16, el.clientHeight - 22);
-      setSize(Math.max(160, Math.floor(s / 8) * 8));
+      setSize(Math.max(120, Math.floor(s / 8) * 8));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -207,20 +276,22 @@ export function Review(p: Props) {
   }, []);
 
   // ---------- what to show ----------
-  const idx = Math.min(step, n); // moves applied to the board
+  const moveIndex = step >= 1 && step <= L ? list[step - 1] : null;
+  const idx = step === 0 ? 0 : step > L ? n : moveIndex! + 1; // moves applied to the board
+  const skipped = moveIndex === null ? 0 : moveIndex - (step >= 2 ? list[step - 2] : -1) - 1;
   const pieces = useMemo(() => trackPieces(p.verbose.slice(0, idx)).filter((x) => !x.ghost), [p.verbose, idx]);
   const posChess = useMemo(() => new Chess(fens[idx]), [fens, idx]);
   const checkSquare = posChess.isCheck() ? findKing(posChess, posChess.turn()) : null;
   const lastM = idx > 0 ? p.verbose[idx - 1] : null;
   const lastMoverId = useMemo(() => (lastM ? (pieces.find((x) => x.square === lastM.to)?.id ?? null) : null), [pieces, lastM]);
-  const cur = step >= 1 && step <= n ? reviewed[step - 1] : undefined;
+  const cur = moveIndex !== null ? reviewed[moveIndex] : undefined;
   const verdict = cur ? VERDICT[cur.cls] : null;
   const wantsTip = cur && (cur.cls === 'inaccuracy' || cur.cls === 'mistake' || cur.cls === 'blunder');
   const suggestion = wantsTip && lastM ? describeSuggestion(lastM.before, cur.best) : null;
   const showArrow = suggestion && cur?.best ? cur.best : null;
 
   const isIntro = step === 0;
-  const isEnd = step === n + 1;
+  const isEnd = step === L + 1 && (L > 0 || n === 0);
   const pipMood: PipMood = isIntro || isEnd ? 'happy' : verdict ? TONE_MOOD[verdict.tone] : 'idle';
 
   let card;
@@ -228,11 +299,18 @@ export function Review(p: Props) {
     card = (
       <>
         <h3 className="rv-title">Let's look back at your game!</h3>
-        <p className="rv-text">I'll walk you through it one move at a time. Tap Continue whenever you're ready.</p>
-        <Scores names={p.names} accuracy={summary.accuracy} great={great} failed={status === 'failed'} />
+        <p className="rv-text">
+          {ready && mode === 'key' && L === 0
+            ? 'This game was calm, with no big moments to look at. Tap “Show every move” below to replay it.'
+            : !ready
+            ? "I'm finding the most important moments…"
+            : mode === 'key'
+              ? `I picked the ${L} most important moment${L === 1 ? '' : 's'}. Tap Start whenever you're ready.`
+              : `We'll go through all ${n} moves, one at a time.`}
+        </p>
         {status !== 'done' && status !== 'failed' && (
           <div className="rv-thinking">
-            <span>Pip is studying the game…</span>
+            <span>Pip is studying the game… {Math.round(progress * 100)}%</span>
             <div className="rv-progress">
               <motion.i animate={{ width: `${Math.max(6, progress * 100)}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
             </div>
@@ -252,15 +330,19 @@ export function Review(p: Props) {
   } else if (lastM) {
     card = (
       <>
-        {verdict ? (
-          <span className={`rv-verdict ${verdict.tone}`}>{verdict.title}</span>
-        ) : status === 'failed' ? null : (
-          <span className="rv-verdict waiting">Pip is thinking…</span>
-        )}
+        <div className="rv-verdict-row">
+          {verdict ? (
+            <span className={`rv-verdict ${verdict.tone}`}>{verdict.title}</span>
+          ) : status === 'failed' ? null : (
+            <span className="rv-verdict waiting">Pip is thinking…</span>
+          )}
+          {skipped > 0 && <span className="rv-skip">{step === 1 ? `After ${skipped} move${skipped === 1 ? '' : 's'}` : `${skipped} move${skipped === 1 ? '' : 's'} later`}</span>}
+        </div>
         <p className="rv-text">
           {describeMove(lastM, p.names)}
           {wantsTip && cur && cur.cls !== 'inaccuracy' && describeDanger(lastM, p.names) && <> {describeDanger(lastM, p.names)}</>}
         </p>
+        {lastM && pointsChange(lastM, p.names) && <span className="rv-points">{pointsChange(lastM, p.names)}</span>}
         {suggestion && (
           <p className="rv-tip">
             <b>Tip:</b> {suggestion.charAt(0).toUpperCase() + suggestion.slice(1)} was even better. Follow the green arrow.
@@ -274,9 +356,9 @@ export function Review(p: Props) {
     <motion.div className="review" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 260, damping: 32 }}>
       <header className="rv-head">
         <h2>Game review</h2>
-        {n > 0 && !isIntro && !isEnd && (
+        {L > 0 && !isIntro && !isEnd && (
           <span className="rv-count">
-            Move {step} of {n}
+            {mode === 'key' ? `Moment ${step} of ${L}` : `Move ${step} of ${L}`}
           </span>
         )}
         <motion.button className="icon-btn" onClick={p.onClose} aria-label="Close review" whileTap={{ scale: 0.88 }}>
@@ -284,7 +366,7 @@ export function Review(p: Props) {
         </motion.button>
       </header>
       <div className="rv-steps" aria-hidden>
-        <motion.i animate={{ width: `${n ? (Math.min(step, n) / n) * 100 : 100}%` }} transition={{ type: 'spring', stiffness: 160, damping: 24 }} />
+        <motion.i animate={{ width: `${L ? (Math.min(step, L) / L) * 100 : 0}%` }} transition={{ type: 'spring', stiffness: 160, damping: 24 }} />
       </div>
 
       <div className="rv-board" ref={areaRef}>
@@ -310,6 +392,8 @@ export function Review(p: Props) {
           </Board>
         )}
       </div>
+
+      {(moveIndex !== null || isEnd) && n > 0 && <Scoreboard balance={moveIndex !== null ? balances[moveIndex] : balances[n - 1]} names={p.names} />}
 
       <div className="rv-card-row">
         <div className="rv-pip">
@@ -344,12 +428,25 @@ export function Review(p: Props) {
             <button className="btn3d grey" onClick={() => go(step - 1)} disabled={isIntro}>
               Back
             </button>
-            <button className="btn3d leaf" onClick={() => go(step + 1)} disabled={n === 0}>
-              {isIntro ? 'Start' : 'Continue'}
+            <button className="btn3d leaf" onClick={() => go(step + 1)} disabled={n === 0 || (isIntro && mode === 'key' && (!ready || L === 0))}>
+              {isIntro ? (ready || mode === 'all' ? 'Start' : 'Getting ready…') : 'Continue'}
             </button>
           </>
         )}
       </div>
+      {(isIntro || isEnd) && n > 0 && (
+        <button
+          className="rv-mode"
+          onClick={() => {
+            sfx('tap');
+            setMode((m) => (m === 'key' ? 'all' : 'key'));
+            stepRef.current = 0;
+            setStep(0);
+          }}
+        >
+          {mode === 'key' ? 'Show every move instead' : 'Show only the key moments'}
+        </button>
+      )}
       <p className="rv-credit">Move ratings by Stockfish 10 (GPL-3.0), running on your device.</p>
     </motion.div>
   );

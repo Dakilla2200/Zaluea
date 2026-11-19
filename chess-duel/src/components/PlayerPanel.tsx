@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { memo } from 'react';
 import type { Color, PieceSymbol } from '../game';
 import { pieceImage, type PieceStyleId } from '../pieces';
+import { signed, standing } from '../standing';
 import { IconFlag } from './Icons';
 import { Pip, type PipMood } from './Pip';
 
@@ -45,7 +46,7 @@ export function formatClock(ms: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
 }
 
-const POP = { type: 'spring', stiffness: 520, damping: 22 } as const;
+const POP = { type: 'spring', stiffness: 300, damping: 30 } as const;
 
 function PlayerPanelImpl(p: Props) {
   const opp: Color = p.color === 'w' ? 'b' : 'w';
@@ -72,12 +73,12 @@ function PlayerPanelImpl(p: Props) {
     <motion.section
       className={`panel${p.active && !p.gameOver ? ' active' : ''}${p.inCheck && !p.gameOver ? ' in-check' : ''}`}
       initial={false}
-      animate={{ rotate: p.turned ? 180 : 0, scale: p.active && !p.gameOver ? 1 : 0.97 }}
-      transition={{ rotate: { type: 'spring', stiffness: 150, damping: 18 }, scale: POP }}
+      animate={{ rotate: p.turned ? 180 : 0 }}
+      transition={{ rotate: { type: 'spring', stiffness: 120, damping: 24 } }}
     >
       <AnimatePresence mode="popLayout">
         {tab && (
-          <motion.span key={tab} className={`turn-tab ${tabKind}`} initial={{ scale: 0, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0, opacity: 0 }} transition={POP}>
+          <motion.span key={tab} className={`turn-tab ${tabKind}`} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ scale: 0, opacity: 0 }} transition={POP}>
             {tab}
           </motion.span>
         )}
@@ -86,11 +87,11 @@ function PlayerPanelImpl(p: Props) {
       <div className="avatar-slot">
         <AnimatePresence mode="popLayout" initial={false}>
           {p.pip ? (
-            <motion.div key="pip" className="pip-seat" initial={{ y: 30, scale: 0.4, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 24, scale: 0.4, opacity: 0 }} transition={POP}>
+            <motion.div key="pip" className="pip-seat" initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} transition={POP}>
               <Pip mood={p.pip.mood} pulse={p.pip.pulse} size={42} />
             </motion.div>
           ) : (
-            <motion.div key="king" className={`avatar ${p.color}`} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={POP}>
+            <motion.div key="king" className={`avatar ${p.color}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={POP}>
               <span style={{ backgroundImage: pieceImage(p.pieceStyle, p.color, 'k') }} />
             </motion.div>
           )}
@@ -100,10 +101,10 @@ function PlayerPanelImpl(p: Props) {
             <motion.div
               key={p.pip.pulse}
               className="bubble"
-              initial={{ scale: 0.3, opacity: 0, y: 10 }}
+              initial={{ scale: 0.92, opacity: 0, y: 6 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.6, opacity: 0, transition: { duration: 0.15 } }}
-              transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
+              transition={POP}
             >
               {p.pip.text}
             </motion.div>
@@ -126,7 +127,13 @@ function PlayerPanelImpl(p: Props) {
           </motion.div>
         ) : (
           <motion.div key="who" className="who" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}>
-            <span className="name">{p.name}</span>
+            <div className="name-row">
+              <span className="name">{p.name}</span>
+              <span className={`standing ${standing(p.advantage).tone}`}>
+                {standing(p.advantage).label}
+                {p.advantage !== 0 && <b>{signed(p.advantage)}</b>}
+              </span>
+            </div>
             <div className="captured">
               <AnimatePresence initial={false}>
                 {p.captured.map((t, i) => (
@@ -134,19 +141,14 @@ function PlayerPanelImpl(p: Props) {
                     key={`${t}${i}`}
                     className={`cap cap-${t}`}
                     style={{ backgroundImage: pieceImage(p.pieceStyle, opp, t) }}
-                    initial={{ scale: 0, y: -14, rotate: -40 }}
-                    animate={{ scale: 1, y: 0, rotate: 0 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 15, delay: 0.35 }}
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25, delay: 0.3 }}
                   />
                 ))}
               </AnimatePresence>
-              {p.advantage > 0 && (
-                <motion.span key={p.advantage} className="adv" initial={{ scale: 1.6 }} animate={{ scale: 1 }} transition={POP}>
-                  +{p.advantage}
-                </motion.span>
-              )}
-              {p.captured.length === 0 && p.advantage <= 0 && <span className="none">No captures yet</span>}
+              {p.captured.length === 0 && <span className="none">No captures yet</span>}
             </div>
           </motion.div>
         )}
@@ -166,8 +168,6 @@ function PlayerPanelImpl(p: Props) {
       {p.clockMs !== null && (
         <motion.div
           className={`clock${p.clockRunning ? ' running' : ''}${low ? ' low' : ''}${p.clockMs <= 0 ? ' flagged' : ''}`}
-          animate={p.clockRunning && low ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-          transition={p.clockRunning && low ? { duration: 1, repeat: Infinity } : POP}
         >
           {formatClock(p.clockMs)}
         </motion.div>

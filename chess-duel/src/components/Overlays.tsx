@@ -6,7 +6,7 @@ import { pieceImage, type PieceStyleId } from '../pieces';
 import { IconClose } from './Icons';
 import { Pip } from './Pip';
 
-const SPRING = { type: 'spring', stiffness: 380, damping: 32 } as const;
+const SPRING = { type: 'spring', stiffness: 320, damping: 38 } as const;
 
 export function Sheet({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
   return (
@@ -15,7 +15,7 @@ export function Sheet({ title, onClose, children, footer }: { title: string; onC
         <div className="grabber" />
         <header className="sheet-head">
           <h2>{title}</h2>
-          <motion.button className="icon-btn" onClick={onClose} aria-label="Close" whileTap={{ scale: 0.85, rotate: 90 }}>
+          <motion.button className="icon-btn" onClick={onClose} aria-label="Close" whileTap={{ scale: 0.92 }}>
             <IconClose />
           </motion.button>
         </header>
@@ -29,7 +29,7 @@ export function Sheet({ title, onClose, children, footer }: { title: string; onC
 export function ConfirmDialog(p: { title: string; message: string; confirmLabel: string; danger?: boolean; onConfirm: () => void; onCancel: () => void }) {
   return (
     <motion.div className="scrim center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onPointerDown={(e) => e.target === e.currentTarget && p.onCancel()}>
-      <motion.div className="dialog" role="alertdialog" aria-modal initial={{ scale: 0.6, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ type: 'spring', stiffness: 460, damping: 22 }}>
+      <motion.div className="dialog" role="alertdialog" aria-modal initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.97, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}>
         <div className="dialog-pip">
           <Pip mood="worried" pulse={1} size={58} />
         </div>
@@ -62,7 +62,7 @@ export function PromotionPicker(p: { color: Color; pieceStyle: PieceStyleId; rot
         if (e.target === e.currentTarget) p.onCancel();
       }}
     >
-      <motion.div className="promo" style={{ rotate: p.rotate ? 180 : 0 }} initial={{ scale: 0.5, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.7, opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 22 }}>
+      <motion.div className="promo" style={{ rotate: p.rotate ? 180 : 0 }} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}>
         <div className="promo-title">Promote your pawn!</div>
         <div className="promo-row">
           {choices.map((t, i) => (
@@ -71,10 +71,10 @@ export function PromotionPicker(p: { color: Color; pieceStyle: PieceStyleId; rot
               className="promo-btn"
               onClick={() => p.onPick(t)}
               aria-label={names[t]}
-              initial={{ y: 24, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.05 + i * 0.05 }}
-              whileTap={{ scale: 0.88 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2, delay: i * 0.03 }}
+              whileTap={{ scale: 0.95 }}
             >
               <span style={{ backgroundImage: pieceImage(p.pieceStyle, p.color, t) }} />
               <small>{names[t]}</small>
@@ -119,8 +119,7 @@ function Confetti() {
         });
       }
     };
-    fire(170, 0);
-    fire(90, 55);
+    fire(90, 0);
     let frame = 0;
     let raf = 0;
     const tick = () => {
@@ -184,17 +183,17 @@ function ResultHalf(p: { me: Color; result: GameResult; names: Record<Color, str
     <motion.div
       className={`result-half ${draw ? 'draw' : won ? 'won' : 'lost'}`}
       style={{ rotate: p.turned ? 180 : 0 }}
-      initial={{ opacity: 0, y: p.turned ? -40 : 40 }}
+      initial={{ opacity: 0, y: p.turned ? -12 : 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.25 }}
+      transition={{ duration: 0.4, ease: 'easeOut', delay: 0.2 }}
     >
       <div className="result-pip">
         <Pip mood={draw ? 'happy' : won ? 'cheer' : 'sad'} pulse={won ? 3 : 1} size={won ? 86 : 64} />
-        <motion.div className="bubble static" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.7 }}>
+        <motion.div className="bubble static" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.3, delay: 0.6 }}>
           {line}
         </motion.div>
       </div>
-      <motion.h1 className="result-headline" initial={{ scale: 0.2, rotate: -10, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.4 }}>
+      <motion.h1 className="result-headline" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.35, ease: 'easeOut', delay: 0.3 }}>
         {headline}
       </motion.h1>
       <p className="result-sub">{sub}</p>
@@ -255,7 +254,7 @@ export function GameOverOverlay(p: {
         {actions}
       </ResultHalf>
       <div className="result-divider">
-        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14, delay: 0.5 }}>
+        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.3, delay: 0.4 }}>
           {p.result.winner ? (p.result.winner === 'w' ? '1 – 0' : '0 – 1') : '½ – ½'}
         </motion.span>
       </div>

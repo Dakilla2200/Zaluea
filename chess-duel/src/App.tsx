@@ -361,7 +361,7 @@ export default function App() {
       <LayoutGroup>
         <div className="stage" ref={stageRef}>
           <div className="top-slot" ref={topRef}>
-            <motion.div key={topColor} layoutId={`panel-${topColor}`} transition={{ type: 'spring', stiffness: 260, damping: 26 }}>
+            <motion.div key={topColor} layoutId={`panel-${topColor}`} transition={{ type: 'spring', stiffness: 220, damping: 32 }}>
               {panel(topColor)}
             </motion.div>
           </div>
@@ -388,7 +388,7 @@ export default function App() {
                 {promo && <PromotionPicker key="promo" color={turn} pieceStyle={settings.pieces} rotate={turn === 'b' && !pass} onPick={onPromote} onCancel={() => setPromo(null)} />}
                 {paused && !result && !promo && (
                   <motion.div key="paused" className={`paused${boardTurned ? ' turned' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <motion.div className="paused-card" initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}>
+                    <motion.div className="paused-card" initial={{ scale: 0.95 }} animate={{ scale: 1 }} transition={{ duration: 0.2 }}>
                       <IconPlay />
                       <span>Paused · tap to resume</span>
                     </motion.div>
@@ -399,7 +399,7 @@ export default function App() {
           </main>
 
           <div className="bottom-slot" ref={bottomRef}>
-            <motion.div key={bottomColor} layoutId={`panel-${bottomColor}`} transition={{ type: 'spring', stiffness: 260, damping: 26 }}>
+            <motion.div key={bottomColor} layoutId={`panel-${bottomColor}`} transition={{ type: 'spring', stiffness: 220, damping: 32 }}>
               {panel(bottomColor)}
             </motion.div>
           </div>
@@ -516,7 +516,7 @@ export default function App() {
 
 function ToolButton({ label, onClick, disabled, kind, children }: { label: string; onClick: () => void; disabled?: boolean; kind?: 'primary' | 'sun'; children: ReactNode }) {
   return (
-    <motion.button className={`tool${kind ? ' ' + kind : ''}`} onClick={onClick} disabled={disabled} aria-label={label} whileTap={disabled ? undefined : { scale: 0.88, y: 3 }} transition={{ type: 'spring', stiffness: 700, damping: 20 }}>
+    <motion.button className={`tool${kind ? ' ' + kind : ''}`} onClick={onClick} disabled={disabled} aria-label={label} whileTap={disabled ? undefined : { scale: 0.95 }} transition={{ type: 'spring', stiffness: 500, damping: 32 }}>
       <span className="tool-icon">{children}</span>
       <span className="tool-label">{label}</span>
     </motion.button>
