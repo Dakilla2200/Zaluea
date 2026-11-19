@@ -4,6 +4,7 @@ import { Board } from './components/Board';
 import { IconHistory, IconNew, IconPause, IconPlay, IconRestart, IconSettings, IconUndo } from './components/Icons';
 import { ConfirmDialog, GameOverOverlay, PromotionPicker } from './components/Overlays';
 import { PlayerPanel, type PanelPrompt } from './components/PlayerPanel';
+import { Review } from './components/Review';
 import { HistorySheet, NewMatchSheet, SettingsSheet } from './components/Sheets';
 import {
   boardResult,
@@ -49,6 +50,7 @@ export default function App() {
   const [pip, setPip] = useState<PipState>(() => pipLine.start('w', 1));
   const [burst, setBurst] = useState<{ square: Square; key: number } | null>(null);
   const [checkKey, setCheckKey] = useState(0);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -58,7 +60,7 @@ export default function App() {
   const turn = chess.turn();
   const result = manualResult ?? boardResult(chess);
   const timed = tc.minutes !== null;
-  const clockRunning = timed && !result && !paused && moves.length > 0 && modal === null;
+  const clockRunning = timed && !result && !paused && moves.length > 0 && modal === null && !reviewOpen;
 
   const sfx = useCallback((name: SoundName, file?: number) => {
     if (settingsRef.current.sound) playSound(name, file);
@@ -448,6 +450,11 @@ export default function App() {
               sfx('tap');
               setOverlayHidden(true);
             }}
+            onReviewGame={() => {
+              sfx('whoosh');
+              setOverlayHidden(true);
+              setReviewOpen(true);
+            }}
             onNewMatch={() => {
               setOverlayHidden(true);
               openModal('new');
@@ -457,8 +464,39 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {reviewOpen && (
+          <Review
+            key="review"
+            verbose={verbose}
+            names={settings.names}
+            theme={theme}
+            pieceStyle={settings.pieces}
+            showCoords={settings.showCoords}
+            sfx={sfx}
+            onClose={() => {
+              sfx('tap');
+              setReviewOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {modal === 'settings' && <SettingsSheet key="settings" settings={settings} onChange={setSettings} onClose={() => setModal(null)} />}
-        {modal === 'history' && <HistorySheet key="history" verbose={verbose} result={result} names={settings.names} onClose={() => setModal(null)} />}
+        {modal === 'history' && (
+          <HistorySheet
+            key="history"
+            verbose={verbose}
+            result={result}
+            names={settings.names}
+            onClose={() => setModal(null)}
+            onReview={() => {
+              sfx('whoosh');
+              setModal(null);
+              setReviewOpen(true);
+            }}
+          />
+        )}
         {modal === 'new' && <NewMatchSheet key="new" current={tc} inProgress={moves.length > 0 && !result} onStart={startGame} onClose={() => setModal(null)} />}
         {modal === 'restart' && (
           <ConfirmDialog

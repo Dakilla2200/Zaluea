@@ -136,7 +136,7 @@ export function SettingsSheet({ settings, onChange, onClose }: { settings: Setti
   );
 }
 
-export function HistorySheet({ verbose, result, names, onClose }: { verbose: Move[]; result: GameResult | null; names: Record<Color, string>; onClose: () => void }) {
+export function HistorySheet({ verbose, result, names, onClose, onReview }: { verbose: Move[]; result: GameResult | null; names: Record<Color, string>; onClose: () => void; onReview: () => void }) {
   const listRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState('');
   useEffect(() => {
@@ -182,8 +182,11 @@ export function HistorySheet({ verbose, result, names, onClose }: { verbose: Mov
       onClose={onClose}
       footer={
         <div className="foot-actions">
+          <button className="btn3d" disabled={!verbose.length} onClick={onReview}>
+            ★ Review
+          </button>
           <button className="btn3d teal" disabled={!verbose.length} onClick={copy}>
-            <IconCopy /> Copy PGN
+            <IconCopy /> PGN
           </button>
           {canShare && (
             <button className="btn3d grey" disabled={!verbose.length} onClick={share}>

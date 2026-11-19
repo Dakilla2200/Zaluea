@@ -226,10 +226,14 @@ export function GameOverOverlay(p: {
   stats: { moves: number; captures: Record<Color, number> };
   onRematch: () => void;
   onReview: () => void;
+  onReviewGame: () => void;
   onNewMatch: () => void;
 }) {
   const actions = (
     <>
+      <button className="btn3d sun-btn wide-row" onClick={p.onReviewGame}>
+        ★ Review game
+      </button>
       <button className="btn3d white-ghost" onClick={p.onReview}>
         View board
       </button>
