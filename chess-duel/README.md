@@ -16,10 +16,10 @@ Meet **Pip the pawn**, the mascot who hops to whichever player he's cheering for
 - Chess clock: no timer, 1 / 3 / 5 / 10 / 15 min, optional +2/+5/+10s increment, pause/resume, low-time warning, auto-pause when the app is backgrounded.
 - Undo, Restart (confirmation), New match, resign (inline confirmation) and draw offer/accept per player.
 - Victory/defeat/draw screen split for both players; move history in SAN with Copy/Share PGN.
-- **Game review**: Stockfish analyses the game on the device (offline). Each move is classed as best, excellent, good,
-  inaccuracy, mistake, blunder or forced; each player gets an accuracy score; an eval bar, a tappable eval graph and a
-  green arrow show the better move; Pip comments on every move. Replay with step/autoplay controls. If the engine
-  can't start, the review falls back to a plain replay.
+- **Game review**: a calm, step-by-step look back at the game. Tap Continue to go one move at a time; each move is
+  explained in plain English ("Sam's queen took a pawn"), rated in friendly words (Perfect move! … Oops, a slip),
+  and slips come with a tip and a green arrow showing the better move. Stockfish rates the moves on the device
+  (offline) in the background; if it can't start, the review is a plain replay.
 - Settings: 6 board themes, 4 piece styles, piece direction, sound/music with volumes, Pip on/off, vibration, legal-move hints, coordinates, player names.
 - Stereo sound effects that pan with the piece's file, plus generative background music (on by default, starts on first tap). Separate volume controls. All synthesized with Web Audio, so nothing to download.
 - Spring animations everywhere: sliding/landing pieces, hopping selection, popping legal-move dots, capture sparks and screen shake, check flash, sliding sheets, confetti victory screen.
